@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	:root {
+		--sw-bg: #f8fafc;
+		--sw-sidebar: #ffffff;
+		--sw-card: #ffffff;
+		--sw-accent-card: #f0f4ff;
+		--sw-border: #e5e7eb;
+		--sw-text: #111827;
+		--sw-body: #374151;
+		--sw-muted: #6b7280;
+		--sw-soft: #4b5563;
+		--sw-placeholder: #9ca3af;
+		--sw-accent: #4f6ef7;
+		--sw-accent-contrast: #ffffff;
+		--sw-accent-soft: #f0f4ff;
+		--sw-accent-border: #e0eaff;
+		--sw-info: #4f6ef7;
+		--sw-info-soft: #f0f4ff;
+		--sw-info-border: #e0eaff;
+		--sw-muted-soft: #f3f4f6;
+		--sw-overlay: #11182799;
+	}
+
+	html {
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+}
