@@ -18,11 +18,12 @@ export default function GoogleSignInButton({
 }: GoogleSignInButtonProps) {
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/, '')
 
 	const resolvedRedirectUri =
 		redirectUri ??
 		(typeof window !== 'undefined'
-			? `${window.location.origin}/auth/google/callback`
+			? `${window.location.origin}${basePath}/auth/google/callback`
 			: `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/auth/google/callback`)
 
 	const handleClick = async () => {

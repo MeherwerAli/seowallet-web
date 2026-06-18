@@ -1363,14 +1363,12 @@ export default function DashboardPage() {
 	}
 
 	const logout = () => {
-		const isKeycloakSession = session?.authProvider === 'keycloak'
 		const idToken = session?.idToken
 		clearSession()
-		if (isKeycloakSession) {
-			window.location.href = keycloakAuth.logoutUrl(idToken)
-			return
-		}
-		router.replace('/auth/login')
+		// Always go through Keycloak logout so the SSO session is invalidated for
+		// all connected clients (hub included). Keycloak redirects to /auth/login
+		// regardless of whether an active session exists.
+		window.location.href = keycloakAuth.logoutUrl(idToken)
 	}
 
 	const navigate = (nextScreen: Screen) => {

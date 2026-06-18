@@ -17,7 +17,8 @@ function GoogleCallbackContent() {
 	useEffect(() => {
 		const code = params.get('code')
 		const state = params.get('state')
-		const redirectUri = `${window.location.origin}/auth/google/callback`
+		const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/, '')
+		const redirectUri = `${window.location.origin}${basePath}/auth/google/callback`
 
 		if (!code || !state) {
 			setError('Invalid callback parameters from Google.')

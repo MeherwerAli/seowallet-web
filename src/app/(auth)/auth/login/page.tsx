@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useRef, useState } from 'react'
 
 import Alert from '@/components/ui/Alert'
 import Button from '@/components/ui/Button'
@@ -11,14 +11,60 @@ import Input from '@/components/ui/Input'
 import AuthCard from '@/components/auth/AuthCard'
 import KeycloakSignInButton from '@/components/auth/KeycloakSignInButton'
 import { authApi, ApiError } from '@/lib/api-client'
-import { storeSession } from '@/lib/session'
+import { keycloakAuth } from '@/lib/keycloak-auth'
+import { getSession, isSessionExpired, storeSession } from '@/lib/session'
+import { adoptHubSession } from '@/lib/session-bridge'
 import type { LocalLoginRequest } from '@/types/auth'
 
-export default function LoginPage() {
+function LoginContent() {
 	const router = useRouter()
+	const searchParams = useSearchParams()
 	const [values, setValues] = useState<LocalLoginRequest>({ usernameOrEmail: '', password: '' })
 	const [apiError, setApiError] = useState<string | null>(null)
 	const [loading, setLoading] = useState(false)
+	const [checkingSso, setCheckingSso] = useState(true)
+	const attemptedSilentSsoRef = useRef(false)
+
+	useEffect(() => {
+		let cancelled = false
+		const existingSession = getSession()
+		if (existingSession && !isSessionExpired(existingSession)) {
+			router.replace('/dashboard')
+			return
+		}
+
+		const silentMiss = searchParams.get('sso') === 'miss'
+
+		const checkSharedSession = async () => {
+			try {
+				const adoptedSession = await adoptHubSession()
+				if (cancelled) return
+				if (adoptedSession) {
+					router.replace(adoptedSession.user.profileCompleted ? '/dashboard' : '/auth/setup')
+					return
+				}
+			} catch {
+				// Continue to Keycloak silent SSO or the login form.
+			}
+
+			if (cancelled) return
+			if (silentMiss || attemptedSilentSsoRef.current) {
+				setCheckingSso(false)
+				return
+			}
+
+			attemptedSilentSsoRef.current = true
+			keycloakAuth.startSilentLogin('/dashboard').catch(() => {
+				if (!cancelled) setCheckingSso(false)
+			})
+		}
+
+		checkSharedSession()
+
+		return () => {
+			cancelled = true
+		}
+	}, [router, searchParams])
 
 	const update = (field: keyof LocalLoginRequest) => (e: React.ChangeEvent<HTMLInputElement>) => {
 		setValues((prev) => ({ ...prev, [field]: e.target.value }))
@@ -52,6 +98,16 @@ export default function LoginPage() {
 		} finally {
 			setLoading(false)
 		}
+	}
+
+	if (checkingSso) {
+		return (
+			<AuthCard title="Checking session" subtitle="Looking for your SEOWallet SSO session...">
+				<div className="flex justify-center py-6">
+					<div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+				</div>
+			</AuthCard>
+		)
 	}
 
 	return (
@@ -108,5 +164,13 @@ export default function LoginPage() {
 				</Link>
 			</p>
 		</AuthCard>
+	)
+}
+
+export default function LoginPage() {
+	return (
+		<Suspense>
+			<LoginContent />
+		</Suspense>
 	)
 }

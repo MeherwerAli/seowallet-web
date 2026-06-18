@@ -9,6 +9,7 @@ type PkceState = {
 	verifier: string
 	redirectUri: string
 	nextPath: string
+	mode?: 'interactive' | 'silent'
 }
 
 type KeycloakTokenResponse = {
@@ -72,33 +73,32 @@ export const keycloakConfig = {
 	clientId: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ?? 'seowallet-web',
 }
 
+const appBasePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/, '')
+
 export const keycloakAuth = {
 	async startLogin(nextPath = '/dashboard', identityProvider?: string) {
-		const redirectUri = `${window.location.origin}/auth/keycloak/callback`
-		const verifier = randomString()
-		const state = randomString(32)
-		const challenge = base64Url(await sha256(verifier))
-
-		const pkceState: PkceState = { state, verifier, redirectUri, nextPath }
-		sessionStorage.setItem(PKCE_KEY, JSON.stringify(pkceState))
-
-		const params = new URLSearchParams({
-			client_id: keycloakConfig.clientId,
-			redirect_uri: redirectUri,
-			response_type: 'code',
-			scope: 'openid profile email',
-			state,
-			code_challenge: challenge,
-			code_challenge_method: 'S256',
-		})
-		if (identityProvider) {
-			params.set('kc_idp_hint', identityProvider)
-		}
-
-		window.location.href = `${keycloakConfig.url}/realms/${keycloakConfig.realm}/protocol/openid-connect/auth?${params.toString()}`
+		await startAuthorization({ nextPath, identityProvider, mode: 'interactive', prompt: 'select_account' })
 	},
 
-	async completeLogin(code: string, state: string): Promise<{ authResponse: AuthResponse; nextPath: string }> {
+	async startSilentLogin(nextPath = '/dashboard') {
+		await startAuthorization({ nextPath, mode: 'silent', prompt: 'none' })
+	},
+
+	consumeLoginError(state?: string | null) {
+		const raw = sessionStorage.getItem(PKCE_KEY)
+		if (!raw) return { mode: 'interactive' as const, nextPath: '/dashboard' }
+
+		const pkceState = JSON.parse(raw) as PkceState
+		const mode = pkceState.mode ?? 'interactive'
+		const nextPath = pkceState.nextPath || '/dashboard'
+		if (!state || pkceState.state === state) {
+			sessionStorage.removeItem(PKCE_KEY)
+		}
+
+		return { mode, nextPath }
+	},
+
+	async completeLogin(code: string, state: string): Promise<{ authResponse: AuthResponse; nextPath: string; mode: 'interactive' | 'silent' }> {
 		const raw = sessionStorage.getItem(PKCE_KEY)
 		if (!raw) throw new Error('Missing Keycloak login state. Please try again.')
 
@@ -126,17 +126,56 @@ export const keycloakAuth = {
 		return {
 			authResponse: toAuthResponse(tokenResponse),
 			nextPath: pkceState.nextPath || '/dashboard',
+			mode: pkceState.mode ?? 'interactive',
 		}
 	},
 
 	logoutUrl(idToken?: string | null) {
 		const params = new URLSearchParams({
 			client_id: keycloakConfig.clientId,
-			post_logout_redirect_uri: `${window.location.origin}/auth/login`,
+			post_logout_redirect_uri: `${window.location.origin}${appBasePath}/auth/login`,
 		})
 		if (idToken) params.set('id_token_hint', idToken)
 		return `${keycloakConfig.url}/realms/${keycloakConfig.realm}/protocol/openid-connect/logout?${params.toString()}`
 	},
+}
+
+async function startAuthorization({
+	nextPath,
+	identityProvider,
+	mode,
+	prompt,
+}: {
+	nextPath: string
+	identityProvider?: string
+	mode: 'interactive' | 'silent'
+	prompt?: 'none' | 'login' | 'consent' | 'select_account'
+}) {
+	const redirectUri = `${window.location.origin}${appBasePath}/auth/keycloak/callback`
+	const verifier = randomString()
+	const state = randomString(32)
+	const challenge = base64Url(await sha256(verifier))
+
+	const pkceState: PkceState = { state, verifier, redirectUri, nextPath, mode }
+	sessionStorage.setItem(PKCE_KEY, JSON.stringify(pkceState))
+
+	const params = new URLSearchParams({
+		client_id: keycloakConfig.clientId,
+		redirect_uri: redirectUri,
+		response_type: 'code',
+		scope: 'openid profile email',
+		state,
+		code_challenge: challenge,
+		code_challenge_method: 'S256',
+	})
+	if (identityProvider) {
+		params.set('kc_idp_hint', identityProvider)
+	}
+	if (prompt) {
+		params.set('prompt', prompt)
+	}
+
+	window.location.href = `${keycloakConfig.url}/realms/${keycloakConfig.realm}/protocol/openid-connect/auth?${params.toString()}`
 }
 
 function toAuthResponse(tokenResponse: KeycloakTokenResponse): AuthResponse {

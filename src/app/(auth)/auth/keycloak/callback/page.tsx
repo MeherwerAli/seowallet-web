@@ -21,6 +21,11 @@ function KeycloakCallbackContent() {
 		const keycloakError = params.get('error_description') ?? params.get('error')
 
 		if (keycloakError) {
+			const pendingLogin = keycloakAuth.consumeLoginError(state)
+			if (pendingLogin.mode === 'silent') {
+				router.replace('/auth/login?sso=miss')
+				return
+			}
 			setError(keycloakError)
 			return
 		}
