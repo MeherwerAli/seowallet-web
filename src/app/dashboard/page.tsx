@@ -7,7 +7,7 @@ import Spinner from '@/components/ui/Spinner'
 import { ApiError, profileApi, walletApi, type WalletLedger, type WalletTransaction } from '@/lib/api-client'
 import { keycloakAuth } from '@/lib/keycloak-auth'
 import { analyzeSeoTool, seoTools, type SeoTool, type ToolAnalysisResult } from '@/lib/seo-tools'
-import { clearSession, requireSession } from '@/lib/session'
+import { LOGOUT_MARKER_KEY, SESSION_KEY, SHARED_SESSION_KEY, clearSession, requireSession } from '@/lib/session'
 import type { AccountProfileResponse, AuthUserProfile, StoredSession } from '@/types/auth'
 
 type Role = 'business' | 'seo'
@@ -1237,6 +1237,25 @@ export default function DashboardPage() {
 		} catch {
 			router.replace('/auth/login')
 		}
+	}, [router])
+
+	useEffect(() => {
+		const handleSuiteStorage = (event: StorageEvent) => {
+			const suiteLogout =
+				event.key === LOGOUT_MARKER_KEY && Boolean(event.newValue)
+			const suiteSessionCleared =
+				(event.key === SESSION_KEY || event.key === SHARED_SESSION_KEY) && !event.newValue
+
+			if (!suiteLogout && !suiteSessionCleared) return
+
+			clearSession()
+			setSession(null)
+			setProfile(null)
+			router.replace('/auth/login')
+		}
+
+		window.addEventListener('storage', handleSuiteStorage)
+		return () => window.removeEventListener('storage', handleSuiteStorage)
 	}, [router])
 
 	useEffect(() => {

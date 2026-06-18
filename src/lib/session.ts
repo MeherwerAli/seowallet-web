@@ -2,9 +2,9 @@
 
 import type { AuthResponse, StoredSession } from '@/types/auth'
 
-const SESSION_KEY = 'sw_session'
-const SHARED_SESSION_KEY = 'seowallet_suite_session'
-const LOGOUT_MARKER_KEY = 'seowallet_suite_logout_at'
+export const SESSION_KEY = 'sw_session'
+export const SHARED_SESSION_KEY = 'seowallet_suite_session'
+export const LOGOUT_MARKER_KEY = 'seowallet_suite_logout_at'
 
 // Keys that @nuxtjs/auth-next (laravelJWT strategy) writes to localStorage in the hub.
 // Clearing these here ensures the hub sees no lingering token when the web console logs out.
