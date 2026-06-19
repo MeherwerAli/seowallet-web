@@ -15,6 +15,7 @@ const TOKEN_KEYS = [
 ]
 
 const REFRESH_TOKEN_KEYS = ['_refresh_token.laravelJWT', 'auth._refresh_token.laravelJWT', 'sso.refreshToken']
+const ID_TOKEN_KEYS = ['sso.idToken', 'auth.sso.idToken']
 const EXPIRY_KEYS = ['_token_expiration.laravelJWT', 'auth._token_expiration.laravelJWT', 'sso.expiresAt']
 
 function readJson<T>(value: string | null): T | null {
@@ -122,14 +123,23 @@ function readSharedSession(): AuthResponse | null {
 	return shared ? storedSessionToAuthResponse(shared) : null
 }
 
+async function hydrateSessionProfile(session: AuthResponse): Promise<AuthResponse> {
+	const profile = await profileApi.getMe(session.accessToken)
+	return {
+		...session,
+		user: profileToUser(profile),
+	}
+}
+
 export async function adoptHubSession(): Promise<AuthResponse | null> {
 	if (typeof window === 'undefined') return null
 	if (readLocalStorage(LOGOUT_MARKER_KEY)) return null
 
 	const sharedSession = readSharedSession()
 	if (sharedSession) {
-		storeSession(sharedSession)
-		return sharedSession
+		const hydratedSession = await hydrateSessionProfile(sharedSession)
+		storeSession(hydratedSession)
+		return hydratedSession
 	}
 
 	const accessToken = normalizeToken(firstStoredValue(TOKEN_KEYS))
@@ -142,10 +152,11 @@ export async function adoptHubSession(): Promise<AuthResponse | null> {
 	const authResponse: AuthResponse = {
 		accessToken,
 		refreshToken: normalizeToken(firstStoredValue(REFRESH_TOKEN_KEYS)) ?? '',
+		idToken: normalizeToken(firstStoredValue(ID_TOKEN_KEYS)) ?? undefined,
 		tokenType: 'Bearer',
 		expiresAt,
-		user: profileToUser(profile),
 		authProvider: 'legacy-user-service',
+		user: profileToUser(profile),
 	}
 
 	storeSession(authResponse)

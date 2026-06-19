@@ -5,7 +5,6 @@ import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 
 import Spinner from '@/components/ui/Spinner'
 import { ApiError, profileApi, walletApi, type WalletLedger, type WalletTransaction } from '@/lib/api-client'
-import { keycloakAuth } from '@/lib/keycloak-auth'
 import { analyzeSeoTool, seoTools, type SeoTool, type ToolAnalysisResult } from '@/lib/seo-tools'
 import { LOGOUT_MARKER_KEY, SESSION_KEY, SHARED_SESSION_KEY, clearSession, requireSession } from '@/lib/session'
 import type { AccountProfileResponse, AuthUserProfile, StoredSession } from '@/types/auth'
@@ -1382,12 +1381,8 @@ export default function DashboardPage() {
 	}
 
 	const logout = () => {
-		const idToken = session?.idToken
 		clearSession()
-		// Always go through Keycloak logout so the SSO session is invalidated for
-		// all connected clients (hub included). Keycloak redirects to /auth/login
-		// regardless of whether an active session exists.
-		window.location.href = keycloakAuth.logoutUrl(idToken)
+		router.replace('/auth/login?logged_out=1')
 	}
 
 	const navigate = (nextScreen: Screen) => {

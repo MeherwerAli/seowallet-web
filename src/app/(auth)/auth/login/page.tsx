@@ -12,7 +12,7 @@ import AuthCard from '@/components/auth/AuthCard'
 import KeycloakSignInButton from '@/components/auth/KeycloakSignInButton'
 import { authApi, ApiError } from '@/lib/api-client'
 import { keycloakAuth } from '@/lib/keycloak-auth'
-import { getSession, isSessionExpired, storeSession } from '@/lib/session'
+import { LOGOUT_MARKER_KEY, getSession, isSessionExpired, storeSession } from '@/lib/session'
 import { adoptHubSession } from '@/lib/session-bridge'
 import type { LocalLoginRequest } from '@/types/auth'
 
@@ -34,13 +34,14 @@ function LoginContent() {
 		}
 
 		const silentMiss = searchParams.get('sso') === 'miss'
+		const justLoggedOut = Boolean(window.localStorage.getItem(LOGOUT_MARKER_KEY)) || searchParams.get('logged_out') === '1'
 
 		const checkSharedSession = async () => {
 			try {
 				const adoptedSession = await adoptHubSession()
 				if (cancelled) return
 				if (adoptedSession) {
-					router.replace(adoptedSession.user.profileCompleted ? '/dashboard' : '/auth/setup')
+					router.replace('/dashboard')
 					return
 				}
 			} catch {
@@ -48,7 +49,7 @@ function LoginContent() {
 			}
 
 			if (cancelled) return
-			if (silentMiss || attemptedSilentSsoRef.current) {
+			if (silentMiss || justLoggedOut || attemptedSilentSsoRef.current) {
 				setCheckingSso(false)
 				return
 			}

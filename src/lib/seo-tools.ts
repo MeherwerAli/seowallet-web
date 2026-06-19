@@ -120,7 +120,7 @@ export const seoTools: SeoTool[] = [
 		inputLabel: 'Link HTML',
 		placeholder: '<a href="/pricing">Pricing</a><a rel="nofollow" href="https://example.com">Partner</a>',
 		inputMode: 'textarea',
-		samples: ['<a href="/blog">Blog</a><a href="https://seodebate.com" rel="nofollow">SEO Debate</a><a href="#">Empty</a>'],
+		samples: ['<a href="/blog">Blog</a><a href="https://beta.seowallet.com" rel="nofollow">SEO Debate</a><a href="#">Empty</a>'],
 		extensionOrigin: 'Link Checker',
 		webWorkflow: 'Paste a page fragment to classify links without Chrome page access.',
 	},

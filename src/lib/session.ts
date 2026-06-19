@@ -13,6 +13,8 @@ const HUB_AUTH_NEXT_KEYS = [
 	'auth._token.laravelJWT',
 	'_refresh_token.laravelJWT',
 	'auth._refresh_token.laravelJWT',
+	'sso.idToken',
+	'auth.sso.idToken',
 	'_token_expiration.laravelJWT',
 	'auth._token_expiration.laravelJWT',
 	'strategy',
@@ -36,6 +38,8 @@ const COOKIE_KEYS = [
 	'auth._token.laravelJWT',
 	'_refresh_token.laravelJWT',
 	'auth._refresh_token.laravelJWT',
+	'sso.idToken',
+	'auth.sso.idToken',
 	'_token_expiration.laravelJWT',
 	'auth._token_expiration.laravelJWT',
 	'strategy',
@@ -71,6 +75,13 @@ export function storeSession(authResponse: AuthResponse): void {
 		localStorage.removeItem(LOGOUT_MARKER_KEY)
 		localStorage.setItem(SESSION_KEY, JSON.stringify(session))
 		localStorage.setItem(SHARED_SESSION_KEY, JSON.stringify(session))
+		if (authResponse.idToken) {
+			localStorage.setItem('sso.idToken', authResponse.idToken)
+			localStorage.setItem('auth.sso.idToken', authResponse.idToken)
+		} else {
+			localStorage.removeItem('sso.idToken')
+			localStorage.removeItem('auth.sso.idToken')
+		}
 	}
 }
 
