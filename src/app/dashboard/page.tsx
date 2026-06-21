@@ -4,13 +4,14 @@ import { useRouter } from 'next/navigation'
 import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 
 import Spinner from '@/components/ui/Spinner'
+import AiCheckerScreen from '@/components/ai-checker/AiCheckerScreen'
 import { ApiError, profileApi, walletApi, type WalletLedger, type WalletTransaction } from '@/lib/api-client'
 import { analyzeSeoTool, seoTools, type SeoTool, type ToolAnalysisResult } from '@/lib/seo-tools'
 import { LOGOUT_MARKER_KEY, SESSION_KEY, SHARED_SESSION_KEY, clearSession, requireSession } from '@/lib/session'
 import type { AccountProfileResponse, AuthUserProfile, StoredSession } from '@/types/auth'
 
 type Role = 'business' | 'seo'
-type Screen = 'dashboard' | 'tools' | 'marketplace' | 'wallet' | 'profile' | 'keyword-tool'
+type Screen = 'dashboard' | 'tools' | 'ai-checker' | 'marketplace' | 'wallet' | 'profile' | 'keyword-tool'
 type Theme = 'dark' | 'light'
 type Toast = { id: number; message: string; type: 'credit' | 'debit' | 'info' }
 type ToolRunState = 'idle' | 'loading' | 'results'
@@ -540,6 +541,7 @@ function Sidebar({
 	const nav = [
 		{ id: 'dashboard' as const, label: 'Dashboard' },
 		{ id: 'tools' as const, label: 'Tools' },
+		{ id: 'ai-checker' as const, label: 'AI Checker' },
 		{ id: 'marketplace' as const, label: role === 'business' ? 'Hire an SEO' : 'Find Work' },
 		{ id: 'wallet' as const, label: 'Wallet' },
 	]
@@ -1460,6 +1462,10 @@ export default function DashboardPage() {
 		dashboard: <DashboardScreen role={role} credits={wallet.balance} transactions={wallet.transactions} user={user} onNavigate={navigate} onOpenTool={openTool} />,
 		tools: <ToolsScreen onOpenTool={openTool} />,
 		'keyword-tool': <ToolDetailScreen tool={selectedTool} query={toolQuery} state={toolRunState} result={toolResult} onQueryChange={setToolQuery} onBack={() => navigate('tools')} onRun={runSelectedTool} />,
+		'ai-checker': <AiCheckerScreen accessToken={session?.accessToken} credits={wallet.balance} onNeedCredits={() => {
+			showToast('Not enough credits for this scan. Add credits first.', 'info')
+			setScreen('wallet')
+		}} />,
 		marketplace: <MarketplaceScreen role={role} />,
 		wallet: <WalletScreen credits={wallet.balance} transactions={wallet.transactions} onPurchase={purchase} />,
 		profile: <ProfileScreen user={user} role={role} draft={profileDraft} roleSetup={roleSetup} onChange={setProfileDraft} onSave={saveProfileDetails} onEditRole={editRoleSetup} />,
@@ -1517,8 +1523,8 @@ export default function DashboardPage() {
 						/>
 					</header>
 					<div className="flex gap-2 border-b border-[var(--sw-border)] bg-[var(--sw-sidebar)] p-3 lg:hidden">
-						{(['dashboard', 'tools', 'marketplace', 'wallet'] as Screen[]).map((item) => (
-							<button key={item} onClick={() => navigate(item)} className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold capitalize ${screen === item || (item === 'tools' && screen === 'keyword-tool') ? 'bg-[var(--sw-accent-soft)] text-[var(--sw-accent)]' : 'bg-[var(--sw-bg)] text-[var(--sw-muted)]'}`}>{item}</button>
+						{(['dashboard', 'tools', 'ai-checker', 'wallet'] as Screen[]).map((item) => (
+							<button key={item} onClick={() => navigate(item)} className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold capitalize ${screen === item || (item === 'tools' && screen === 'keyword-tool') ? 'bg-[var(--sw-accent-soft)] text-[var(--sw-accent)]' : 'bg-[var(--sw-bg)] text-[var(--sw-muted)]'}`}>{item.replace('-', ' ')}</button>
 						))}
 					</div>
 					<div className="flex gap-1 border-b border-[var(--sw-border)] bg-[var(--sw-sidebar)] px-3 pb-3 lg:hidden">
