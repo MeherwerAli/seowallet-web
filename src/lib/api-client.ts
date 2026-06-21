@@ -126,6 +126,45 @@ export type WalletLedger = {
 	transactions: WalletTransaction[]
 }
 
+export type AiDetectionSentence = {
+	idx: number
+	text: string
+	start: number
+	end: number
+	ai_probability: number
+	confidence: 'low' | 'medium' | 'high'
+	shade: 'red' | 'orange' | 'yellow' | 'green'
+}
+
+export type AiDetectionResult = {
+	label: 'ai' | 'human' | 'mixed' | 'uncertain'
+	document_classification?: 'AI_ONLY' | 'HUMAN_ONLY' | 'MIXED' | 'UNCERTAIN'
+	ai_score: number
+	confidence: 'low' | 'medium' | 'high'
+	confidence_category?: 'low' | 'medium' | 'high'
+	class_probabilities?: {
+		human?: number
+		mixed?: number
+		ai?: number
+	} | null
+	subclass?: 'pure_ai' | 'ai_paraphrased' | 'lightly_edited' | 'mixed' | 'human' | 'uncertain' | string | null
+	reliable: boolean
+	sentences?: AiDetectionSentence[]
+}
+
+export type AiDetectionScan = {
+	scan_id: string
+	status: 'pending' | 'completed' | 'failed'
+	model_version: string
+	word_count: number
+	credits_spent: number
+	scan_types: string[]
+	source_type: 'text' | 'url' | 'batch'
+	created_at: string
+	expires_at?: string | null
+	result: AiDetectionResult | null
+}
+
 export const walletApi = {
 	getWallet: (accessToken: string) => request<WalletLedger>('/wallet', {}, accessToken),
 
@@ -148,6 +187,52 @@ export const walletApi = {
 			{ method: 'POST', body: JSON.stringify(payload) },
 			accessToken,
 		),
+}
+
+export const aiDetectionApi = {
+	scan: (
+		payload: {
+			text: string
+			model?: string
+			scan_types?: string[]
+			highlight?: boolean
+			project_id?: string
+			idempotency_key?: string
+		},
+		accessToken: string,
+	) =>
+		request<AiDetectionScan>(
+			'/ai-detection/scan',
+			{ method: 'POST', body: JSON.stringify(payload) },
+			accessToken,
+		),
+
+	scanUrl: (
+		payload: {
+			url: string
+			model?: string
+			scan_types?: string[]
+			highlight?: boolean
+			project_id?: string
+			idempotency_key?: string
+		},
+		accessToken: string,
+	) =>
+		request<AiDetectionScan>(
+			'/ai-detection/scan-url',
+			{ method: 'POST', body: JSON.stringify(payload) },
+			accessToken,
+		),
+
+	listScans: (accessToken: string, limit = 20, offset = 0) =>
+		request<{ scans: AiDetectionScan[]; limit: number; offset: number }>(
+			`/ai-detection/scans?limit=${limit}&offset=${offset}`,
+			{},
+			accessToken,
+		),
+
+	getScan: (scanId: string, accessToken: string) =>
+		request<AiDetectionScan>(`/ai-detection/scans/${encodeURIComponent(scanId)}`, {}, accessToken),
 }
 
 export { ApiError }
